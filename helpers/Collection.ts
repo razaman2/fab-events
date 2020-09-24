@@ -17,14 +17,14 @@ export default class Collection extends ReactiveVue {
         type: Array
     }) protected readonly belongsTo: Array<() => Collection> | undefined;
 
-    @Watch('state.props.id', { immediate: true })
+    @Watch('state.props.id', {immediate: true})
     protected onCollectionIDChanged(id: string) {
         if (id) {
             this.subscription();
         }
     }
 
-    @Watch('doc', { immediate: true })
+    @Watch('doc', {immediate: true})
     protected onCollectionDocChanged(doc: firebase.firestore.DocumentReference) {
         if (doc) {
             this.subscription = doc.onSnapshot((snapshot) => {
@@ -67,15 +67,19 @@ export default class Collection extends ReactiveVue {
     }
 
     protected getPayload(params: {
-        user?: Function
-        data?: object,
+        user?: Function,
+        company?: Function,
+        data?: { belongsTo?: Array<string> },
         doc?: firebase.firestore.DocumentReference,
     }) {
-        const { data = {}, doc, user } = params;
+        const { data = {}, doc, user, company } = params;
+
+        const relationship = `${this.getCompany(company)} companies`;
 
         return {
             ...data,
             id: doc?.id ?? '',
+            belongsTo: Array.isArray(data.belongsTo) ? data.belongsTo.concat(relationship) : [relationship],
             createdBy: this.getUser(user),
             createdAt: this.getTimestamp()
         };
@@ -103,7 +107,7 @@ export default class Collection extends ReactiveVue {
         doc?: firebase.firestore.DocumentReference,
         batch?: firebase.firestore.WriteBatch
     }) {
-        const { data, doc, batch } = params;
+        const {data, doc, batch} = params;
 
         this.doc = doc ? doc : this.getCollection().doc();
 
@@ -134,7 +138,7 @@ export default class Collection extends ReactiveVue {
             operation: 'create'
         });
 
-        this.notifyBeforeDocumentCreatedListeners(params);
+        this.notifyEventListeners('beforeCreate', params);
 
         return batch ? batch.set(this.doc, payload) : this.doc.set(payload);
     }
@@ -147,7 +151,7 @@ export default class Collection extends ReactiveVue {
     }) {
         console.log(`%cSet Data: ${this.constructor.name}`, 'color: lightblue;', params);
 
-        const { data, batch, doc } = params;
+        const {data, batch, doc} = params;
 
         const document = doc ?? this.getCollection().doc(this.getData('id'));
 
@@ -158,9 +162,9 @@ export default class Collection extends ReactiveVue {
             data: payload
         });
 
-        this.notifyBeforeDocumentUpdatedListeners(params);
+        this.notifyEventListeners('beforeUpdate', params);
 
-        return batch ? batch.set(document, payload, { merge: true }) : document.set(payload, { merge: true });
+        return batch ? batch.set(document, payload, {merge: true}) : document.set(payload, {merge: true});
     }
 
     public remove(params: {
@@ -170,7 +174,7 @@ export default class Collection extends ReactiveVue {
     }) {
         console.log(`%cSet Data: ${this.constructor.name}`, 'color: red;', params);
 
-        const { batch, doc } = params;
+        const {batch, doc} = params;
 
         const document = doc ?? this.getCollection().doc(this.getData('id'));
 
@@ -180,7 +184,7 @@ export default class Collection extends ReactiveVue {
             operation: 'delete'
         });
 
-        this.notifyBeforeDocumentDeletedListeners(params);
+        this.notifyEventListeners('beforeDelete', params);
 
         return batch ? batch.delete(document) : document.delete();
     }
@@ -213,7 +217,7 @@ export default class Collection extends ReactiveVue {
         batch?: firebase.firestore.WriteBatch
     }) {
         if (this.logging()) {
-            const { data, operation, batch, user } = params;
+            const {data, operation, batch, user} = params;
 
             const payload = {
                 belongsTo: this.getDocumentOwners(),
@@ -246,6 +250,10 @@ export default class Collection extends ReactiveVue {
         return user ? user('id') : this.user('id');
     }
 
+    public getCompany(company: Function | undefined) {
+        return company ? company('id') : this.company('id');
+    }
+
     public getCollection() {
         return this.$firebase.firestore().collection(this.getCollectionName());
     }
@@ -261,65 +269,5 @@ export default class Collection extends ReactiveVue {
 
     public getCollectionName(): string {
         throw new Error(`Collection Name In ${this.constructor.name} Was Not Provided.`);
-    }
-
-    public addBeforeDocumentUpdatedListeners(...handlers: Array<Function>) {
-        handlers.forEach((handler) => {
-            this.$on(`${this.constructor.name}.before-updated`, handler);
-        });
-    }
-
-    protected notifyBeforeDocumentUpdatedListeners(...params: Array<any>) {
-        this.$emit(`${this.constructor.name}.before-updated`, this, ...params);
-    }
-
-    public addBeforeDocumentDeletedListeners(...handlers: Array<Function>) {
-        handlers.forEach((handler) => {
-            this.$on(`${this.constructor.name}.before-deleted`, handler);
-        });
-    }
-
-    protected notifyBeforeDocumentDeletedListeners(...params: Array<any>) {
-        this.$emit(`${this.constructor.name}.before-deleted`, this, ...params);
-    }
-
-    public addBeforeDocumentCreatedListeners(...handlers: Array<Function>) {
-        handlers.forEach((handler) => {
-            this.$on(`${this.constructor.name}.before-created`, handler);
-        });
-    }
-
-    protected notifyBeforeDocumentCreatedListeners(...params: Array<any>) {
-        this.$emit(`${this.constructor.name}.before-created`, this, ...params);
-    }
-
-    public addDocumentDeletedListeners(...handlers: Array<Function>) {
-        handlers.forEach((handler) => {
-            this.$on(`${this.constructor.name}.deleted`, handler);
-        });
-    }
-
-    public notifyDocumentDeletedListeners(...params: Array<any>) {
-        this.$emit(`${this.constructor.name}.deleted`, this, ...params);
-    }
-
-    public addDocumentUpdatedListeners(...handlers: Array<Function>) {
-        handlers.forEach((handler) => {
-            this.$on(`${this.constructor.name}.updated`, handler);
-        });
-    }
-
-    public notifyDocumentUpdatedListeners(...params: Array<any>) {
-        this.$emit(`${this.constructor.name}.updated`, this, ...params);
-    }
-
-    public addDocumentCreatedListeners(...handlers: Array<Function>) {
-        handlers.forEach((handler) => {
-            this.$on(`${this.constructor.name}.created`, handler);
-        });
-    }
-
-    public notifyDocumentCreatedListeners(...params: Array<any>) {
-        this.$emit(`${this.constructor.name}.created`, this, ...params);
     }
 }

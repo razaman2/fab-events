@@ -1,11 +1,23 @@
-<template>
-  <div id="q-app">
-    <router-view />
-  </div>
-</template>
 <script lang="ts">
-import { Vue, Component } from 'vue-property-decorator'
+import {
+    Component,
+    Vue
+} from 'vue-property-decorator'
+import ReactiveVue
+    from "app/helpers/ReactiveVue";
 
 @Component
-export default class App extends Vue {}
+export default class App extends ReactiveVue {
+    public template(createElement: Vue.CreateElement) {
+        return createElement('div', {
+            attrs: {
+                id: 'q-app'
+            }
+        }, [
+            createElement('router-view', {
+                props: {key: this.$route.fullPath}
+            })
+        ]);
+    }
+}
 </script>

@@ -169,7 +169,7 @@ export default class ReactiveVue extends Vue {
     });
   }
 
-  protected notifyEventListeners(name?: string, ...params: Array<any>) {
+  public notifyEventListeners(name?: string, ...params: Array<any>) {
     (name ? [name] : this.eventRegistrations.concat([''])).forEach((registration) => {
       this.$emit(`${this.constructor.name}${registration ? `.${registration}` : ''}`, this, ...params);
     });
