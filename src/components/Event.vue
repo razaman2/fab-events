@@ -9,6 +9,10 @@ import Address
     from "components/global/Address";
 import CustomExpansionItem
     from "components/global/CustomExpansionItem";
+import Email
+    from "components/global/Email";
+import Phone
+    from "components/global/Phone";
 
 @Component
 export default class Event extends Collection {
@@ -22,7 +26,15 @@ export default class Event extends Collection {
     public template(createElement: Vue.CreateElement) {
         return createElement('q-card', [
             createElement('q-card-section', [
-                this.getEventName()
+                this.getEventName(),
+                createElement(Email, {
+                    ref: 'email',
+                    props: {belongsTo: [() => this]}
+                }),
+                createElement(Phone, {
+                    ref: 'phone',
+                    props: {belongsTo: [() => this]}
+                })
             ]),
             this.getAddress(),
             createElement('q-card-section', [
@@ -51,9 +63,8 @@ export default class Event extends Collection {
 
     protected getAddress() {
         return this.$createElement(CustomExpansionItem, {
-            props: {
-                label: 'Address',
-            }
+            props: {label: 'Address'},
+            on: {show: () => this.notifyEventListeners('onAddressShowing')}
         }, [
             this.$createElement('div', {
                 class: 'q-px-md'
@@ -73,7 +84,7 @@ export default class Event extends Collection {
             props: {
                 label: 'Date',
                 value: this.getData('date', ''),
-                mask: '####-##-##'
+                mask: 'date'
             },
             on: {input: (date: string) => this.setData({date})}
         }, [
@@ -82,7 +93,9 @@ export default class Event extends Collection {
                     class: 'cursor-pointer',
                     props: {name: 'event'}
                 }, [
-                    this.$createElement('q-popup-proxy', [
+                    this.$createElement('q-popup-proxy', {
+                        props: {breakpoint: 1920}
+                    }, [
                         this.$createElement('q-date', {
                             props: {value: this.getData('date', '')},
                             on: {input: (date: string) => this.setData({date})}
@@ -107,7 +120,9 @@ export default class Event extends Collection {
                     class: 'cursor-pointer',
                     props: {name: 'access_time'}
                 }, [
-                    this.$createElement('q-popup-proxy', [
+                    this.$createElement('q-popup-proxy', {
+                        props: {breakpoint: 1920}
+                    }, [
                         this.$createElement('q-time', {
                             props: {value: this.getData('time', '')},
                             on: {input: (time: string) => this.setData({time})}
