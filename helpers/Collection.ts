@@ -4,44 +4,24 @@ import ReactiveVue
     from 'app/helpers/ReactiveVue';
 import {
     Component,
-    Prop,
-    Watch
+    Prop
 } from 'vue-property-decorator';
 import firebase
     from 'firebase';
+import Subscriptions
+    from "app/helpers/Subscriptions";
 
 @Component
 export default class Collection extends ReactiveVue {
     @Prop({
         required: false,
         type: Array
-    }) protected readonly belongsTo: Array<() => Collection> | undefined;
+    }) protected readonly belongsTo?: Array<() => Collection>;
 
-    @Watch('state.props.id', {immediate: true})
-    protected onCollectionIDChanged(id: string) {
-        if (id) {
-            this.subscription();
-        }
-    }
-
-    @Watch('doc', {immediate: true})
-    protected onCollectionDocChanged(doc: firebase.firestore.DocumentReference) {
-        if (doc) {
-            this.subscription = doc.onSnapshot((snapshot) => {
-                if (snapshot.exists) {
-                    this.$set(this.state, 'props', (snapshot.data() ?? {}));
-                }
-            });
-        }
-    }
-
-    protected doc: firebase.firestore.DocumentReference | undefined;
-
-    protected subscription = () => {
-    };
+    protected doc: firebase.firestore.DocumentReference | { [p: string]: any } = {};
 
     protected beforeDestroy() {
-        this.subscription();
+        Subscriptions.get().unsubscribe(`${this.constructor.name}/${this.getDoc().id}`);
     }
 
     protected logging() {
@@ -60,10 +40,14 @@ export default class Collection extends ReactiveVue {
         return this.isDocumentExists() && !this.isDatabaseRecord(data);
     }
 
-    public getDocuments(id?: string) {
-        return this.getCollection().doc(id).onSnapshot((snapshot: firebase.firestore.DocumentSnapshot) => {
-            this.$set(this.state, 'props', snapshot.exists ? (snapshot.data() ?? {}) : {});
-        });
+    public getDocuments(param?: string | Function) {
+        if (typeof param === "function") {
+            return param(this);
+        } else {
+            return this.getCollection().doc(param).onSnapshot((snapshot: firebase.firestore.DocumentSnapshot) => {
+                this.repData(snapshot.exists ? (snapshot.data() ?? {}) : {});
+            });
+        }
     }
 
     protected getPayload(params: {
@@ -72,17 +56,26 @@ export default class Collection extends ReactiveVue {
         data?: { belongsTo?: Array<string> },
         doc?: firebase.firestore.DocumentReference,
     }) {
-        const { data = {}, doc, user, company } = params;
+        const {data = {}, doc, user, company} = params;
 
-        const relationship = `${this.getCompany(company)} companies`;
+        const relationship = this.getCompany(company);
+        const createdBy = this.getUser(user);
 
-        return {
+        const payload: { [p: string]: any } = {
             ...data,
             id: doc?.id ?? '',
-            belongsTo: Array.isArray(data.belongsTo) ? data.belongsTo.concat(relationship) : [relationship],
-            createdBy: this.getUser(user),
             createdAt: this.getTimestamp()
-        };
+        }
+
+        if (relationship) {
+            payload.belongsTo = Array.isArray(data.belongsTo) ? data.belongsTo.concat(`${relationship} companies`) : [`${relationship} companies`];
+        }
+
+        if (createdBy) {
+            payload.createdBy = createdBy;
+        }
+
+        return payload;
     }
 
     /**
@@ -106,7 +99,7 @@ export default class Collection extends ReactiveVue {
         data?: { [p: string]: any } | Function,
         doc?: firebase.firestore.DocumentReference,
         batch?: firebase.firestore.WriteBatch
-    }) {
+    } = {}) {
         const {data, doc, batch} = params;
 
         this.doc = doc ? doc : this.getCollection().doc();
@@ -138,9 +131,11 @@ export default class Collection extends ReactiveVue {
             operation: 'create'
         });
 
-        this.notifyEventListeners('beforeCreate', params);
+        this.notifyEventListeners('creating', params);
 
-        return batch ? batch.set(this.doc, payload) : this.doc.set(payload);
+        Subscriptions.get().subscribe(`${this.constructor.name}/${this.getDoc().id}`, this.getDocuments(this.getDoc().id));
+
+        return batch ? batch.set(this.getDoc(), payload) : this.getDoc().set(payload);
     }
 
     public update(params: {
@@ -162,7 +157,7 @@ export default class Collection extends ReactiveVue {
             data: payload
         });
 
-        this.notifyEventListeners('beforeUpdate', params);
+        this.notifyEventListeners('updating', params);
 
         return batch ? batch.set(document, payload, {merge: true}) : document.set(payload, {merge: true});
     }
@@ -171,7 +166,7 @@ export default class Collection extends ReactiveVue {
         [p: string]: any,
         doc?: firebase.firestore.DocumentReference,
         batch?: firebase.firestore.WriteBatch
-    }) {
+    } = {}) {
         console.log(`%cSet Data: ${this.constructor.name}`, 'color: red;', params);
 
         const {batch, doc} = params;
@@ -184,12 +179,12 @@ export default class Collection extends ReactiveVue {
             operation: 'delete'
         });
 
-        this.notifyEventListeners('beforeDelete', params);
+        this.notifyEventListeners('deleting', params);
 
         return batch ? batch.delete(document) : document.delete();
     }
 
-    protected databaseWrite(data: object) {
+    protected async databaseWrite(data: object) {
         const batch = this.$firebase.firestore().batch();
 
         this.update({
@@ -197,7 +192,9 @@ export default class Collection extends ReactiveVue {
             batch
         });
 
-        batch.commit();
+        await batch.commit();
+
+        this.notifyEventListeners('updated');
     }
 
     public setData(data: object) {
@@ -219,15 +216,20 @@ export default class Collection extends ReactiveVue {
         if (this.logging()) {
             const {data, operation, batch, user} = params;
 
-            const payload = {
+            const createdBy = this.getUser(user);
+
+            const payload: any = {
                 belongsTo: this.getDocumentOwners(),
-                createdBy: this.getUser(user),
                 createdAt: this.getTimestamp(),
                 before: /create/i.test(`${operation}`) ? {} : this.getData(),
                 after: data,
                 type: this.constructor.name,
                 operation: operation ?? 'update'
             };
+
+            if (createdBy) {
+                payload.createdBy = createdBy;
+            }
 
             console.log(`%cSet Data: ${this.constructor.name}`, 'color: yellow;', payload);
 
@@ -260,7 +262,11 @@ export default class Collection extends ReactiveVue {
 
     public getDoc() {
         const id = this.getData('id');
-        return id ? this.getCollection().doc(id) : this.doc;
+        if (this.doc.id && (this.doc.id === id)) {
+            return this.doc;
+        } else {
+            return id ? this.getCollection().doc(id) : this.doc.id ? this.doc : this.getCollection().doc();
+        }
     }
 
     public getDocumentOwners(): Array<string> {

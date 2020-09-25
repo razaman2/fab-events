@@ -19,7 +19,7 @@ export default class FirestoreUpdate {
 interface Update {
   before: any,
   after: any,
-  createdBy: string,
+  createdBy?: string,
   belongsTo: Array<string>,
   createdAt: object,
   type: string,

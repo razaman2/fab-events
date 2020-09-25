@@ -7,6 +7,7 @@ import env
     from 'app/env';
 
 import {boot} from 'quasar/wrappers';
+import {Vue} from "vue-property-decorator";
 
 const config = {
     apiKey: env.FIREBASE_API_KEY,
@@ -18,12 +19,14 @@ const config = {
     appId: env.FIREBASE_APP_ID
 };
 
+firebase.initializeApp(config);
+
 declare module 'vue/types/vue' {
     interface Vue {
         $firebase: firebase.app.App;
     }
 }
 
-export default boot(({Vue}: { Vue: any }) => {
-    Vue.prototype.$firebase = firebase.initializeApp(config);
+export default boot(({Vue}: { Vue: Vue.VueConstructor }) => {
+    Vue.prototype.$firebase = firebase;
 });
