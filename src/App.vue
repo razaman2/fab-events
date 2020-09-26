@@ -14,6 +14,10 @@ export default class App extends ReactiveVue {
         console.log('Subscription:', Subscriptions.get());
     }
 
+    protected beforeDestroy() {
+        Subscriptions.get().unsubscribe();
+    }
+
     public template(createElement: Vue.CreateElement) {
         return createElement('div', {
             attrs: {id: 'q-app'}

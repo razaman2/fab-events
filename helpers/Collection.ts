@@ -14,7 +14,6 @@ import Subscriptions
 @Component
 export default class Collection extends ReactiveVue {
     @Prop({
-        required: false,
         type: Array
     }) protected readonly belongsTo?: Array<() => Collection>;
 
@@ -51,8 +50,8 @@ export default class Collection extends ReactiveVue {
     }
 
     protected getPayload(params: {
-        user?: Function,
-        company?: Function,
+        user?: { id: string },
+        company?: { id: string },
         data?: { belongsTo?: Array<string> },
         doc?: firebase.firestore.DocumentReference,
     }) {
@@ -209,7 +208,7 @@ export default class Collection extends ReactiveVue {
 
     protected log(params: {
         data: object,
-        user?: Function,
+        user?: { id: string },
         operation?: string,
         batch?: firebase.firestore.WriteBatch
     }) {
@@ -248,12 +247,12 @@ export default class Collection extends ReactiveVue {
         return (this.$firebase.firestore as { [p: string]: any }).FieldValue.serverTimestamp();
     }
 
-    public getUser(user: Function | undefined) {
-        return user ? user('id') : this.user('id');
+    public getUser(user?: { id: string }) {
+        return user ? user.id : '';
     }
 
-    public getCompany(company: Function | undefined) {
-        return company ? company('id') : this.company('id');
+    public getCompany(company?: { id: string }) {
+        return company ? company.id : '';
     }
 
     public getCollection() {

@@ -28,6 +28,7 @@ export default class FirestoreSubscription {
         if (subscription) {
           subscription.handler();
           this.remove(subscription);
+          console.log(`%cUnsubscribed From Subscription (${name})`, 'background-color: yellow; color: red; font-weight: bold; padding: 3px;');
         }
       });
     } else {

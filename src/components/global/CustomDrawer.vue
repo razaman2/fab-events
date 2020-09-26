@@ -5,7 +5,7 @@ import {
     Vue
 } from 'vue-property-decorator'
 import ReactiveVue
-    from "app/helpers/ReactiveVue";
+    from 'app/helpers/ReactiveVue';
 
 @Component
 export default class CustomDrawer extends ReactiveVue {

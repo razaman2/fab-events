@@ -1,18 +1,18 @@
 <script lang="ts">
 import {Component} from 'vue-property-decorator'
 import Collection
-    from "app/helpers/Collection";
+    from 'app/helpers/Collection';
 import {date} from 'quasar';
 import env
-    from "app/env";
+    from 'app/env';
 import Address
-    from "components/global/Address";
+    from 'components/global/Address';
 import CustomExpansionItem
-    from "components/global/CustomExpansionItem";
+    from 'components/global/CustomExpansionItem';
 import Email
-    from "components/global/Email";
+    from 'components/global/Email';
 import Phone
-    from "components/global/Phone";
+    from 'components/global/Phone';
 
 @Component
 export default class Event extends Collection {
@@ -53,11 +53,9 @@ export default class Event extends Collection {
             props: {
                 label: 'Name',
                 value: this.getData('name', ''),
-                debounce: env.DEBOUNCE.MEDIUM
+                debounce: env.DEBOUNCE.AGGRESSIVE
             },
-            on: {
-                input: (name: string) => this.setData({name})
-            }
+            on: {input: (name: string) => this.setData({name})}
         });
     }
 
@@ -71,9 +69,7 @@ export default class Event extends Collection {
             }, [
                 this.$createElement(Address, {
                     ref: 'address',
-                    props: {
-                        belongsTo: [() => this]
-                    }
+                    props: {belongsTo: [() => this]}
                 })
             ])
         ]);

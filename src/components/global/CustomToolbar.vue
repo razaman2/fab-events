@@ -4,7 +4,7 @@ import {
     Vue
 } from 'vue-property-decorator'
 import ReactiveVue
-    from "app/helpers/ReactiveVue";
+    from 'app/helpers/ReactiveVue';
 
 @Component
 export default class CustomToolbar extends ReactiveVue {
@@ -16,7 +16,10 @@ export default class CustomToolbar extends ReactiveVue {
                 on: this.getComponentEvents()
             }),
 
-            this.$createElement('q-toolbar-title', `Shay's Fab Events`),
+            this.$createElement('q-toolbar-title', {
+                class: 'cursor-pointer',
+                on: {click: () => this.$router.push('/')}
+            }, `Shay's Fab Events`),
 
             this.$createElement('div', `Quasar v${this.$q.version}`)
         ]);
