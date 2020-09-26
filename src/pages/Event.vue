@@ -111,7 +111,7 @@ export default class Index extends ReactiveVue {
                                 props: {
                                     label: 'save event',
                                     color: 'positive',
-                                    loading: this.loadingStatus
+                                    loading: this.loadingStatus()
                                 },
                                 on: {
                                     click: () => {

@@ -40,20 +40,20 @@ export default class ReactiveVue extends Vue {
         text: 'Please wait...'
     };
 
-    protected get loadingStatus() {
+    protected loadingStatus(status?: boolean) {
+        if (status) {
+            this.loading.status = status;
+        }
+
         return this.loading.status;
     }
 
-    protected set loadingStatus(status: boolean) {
-        this.loading.status = status;
-    }
+    protected loadingText(message?: string) {
+        if (message) {
+            this.loading.text = message;
+        }
 
-    protected get loadingText() {
         return this.loading.text;
-    }
-
-    protected set loadingText(text: string) {
-        this.loading.text = text;
     }
 
     protected async safeRequest(request: {
@@ -61,7 +61,7 @@ export default class ReactiveVue extends Vue {
         catch?: (error: any) => any,
         finally?: Function
     }) {
-        this.loadingStatus = true;
+        this.loadingStatus(true);
         try {
             return await request.try();
         } catch (e) {
@@ -71,7 +71,7 @@ export default class ReactiveVue extends Vue {
                 await request.finally();
             }
 
-            this.loadingStatus = false;
+            this.loadingStatus(false);
         }
     }
 

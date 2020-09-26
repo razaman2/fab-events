@@ -118,7 +118,7 @@ export default class Phone extends Collection {
             mask: 'phone',
             label: 'Phone',
             type: 'tel',
-            loading: this.loadingStatus,
+            loading: this.loadingStatus(),
             debounce: env.DEBOUNCE.AGGRESSIVE
         };
     }

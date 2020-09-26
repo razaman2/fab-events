@@ -12,7 +12,7 @@ export default class NoteForm extends CustomDialog {
     @Prop({
         required: true,
         type: Notes
-    }) protected readonly notes: Notes;
+    }) protected readonly notes?: Notes;
 
     // START HTML NODES
     protected getDialogTitle() {
@@ -61,7 +61,7 @@ export default class NoteForm extends CustomDialog {
         return this.$createElement('q-btn', {
             class: 'q-my-md',
             props: {
-                loading: this.loadingStatus,
+                loading: this.loadingStatus(),
                 label: 'Save',
                 color: 'positive'
             },
