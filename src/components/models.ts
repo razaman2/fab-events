@@ -49,3 +49,11 @@ export interface Address {
     belongsTo: Array<string>,
     createdAt: Timestamp
 }
+
+export interface Navigation {
+    title: string,
+    icon: string,
+    path?: string,
+    inset?: number,
+    action?: Function
+}

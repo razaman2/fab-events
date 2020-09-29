@@ -93,6 +93,29 @@ export default class Email extends Collection {
         return 'emails';
     }
 
+    protected getSaveButton() {
+        if (!this.getData('id')) {
+            return this.$createElement('q-btn', {
+                props: {
+                    label: 'save',
+                    color: 'positive',
+                    loading: this.loadingStatus()
+                },
+                on: {
+                    click: () => this.safeRequest({
+                        try: async () => {
+                            const batch = this.$firebase.firestore().batch();
+                            this.create({batch});
+
+                            await batch.commit();
+                            this.notifyEventListeners('created');
+                        }
+                    })
+                }
+            });
+        }
+    }
+
     /**
      * access the email.address before saving to database and transform lowercase
      * and strip whitespaces.

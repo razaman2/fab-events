@@ -9,7 +9,7 @@ import {
 import firebase
     from 'firebase';
 import Subscriptions
-    from "app/helpers/Subscriptions";
+    from 'app/helpers/Subscriptions';
 
 @Component
 export default class Collection extends ReactiveVue {
@@ -40,7 +40,7 @@ export default class Collection extends ReactiveVue {
     }
 
     public getDocuments(param?: string | Function) {
-        if (typeof param === "function") {
+        if (typeof param === 'function') {
             return param(this);
         } else {
             return this.getCollection().doc(param).onSnapshot((snapshot: firebase.firestore.DocumentSnapshot) => {
@@ -55,7 +55,7 @@ export default class Collection extends ReactiveVue {
         data?: { belongsTo?: Array<string> },
         doc?: firebase.firestore.DocumentReference,
     }) {
-        const {data = {}, doc, user, company} = params;
+        const { data = {}, doc, user, company } = params;
 
         const relationship = this.getCompany(company);
         const createdBy = this.getUser(user);
@@ -64,7 +64,7 @@ export default class Collection extends ReactiveVue {
             ...data,
             id: doc?.id ?? '',
             createdAt: this.getTimestamp()
-        }
+        };
 
         if (relationship) {
             payload.belongsTo = Array.isArray(data.belongsTo) ? data.belongsTo.concat(`${relationship} companies`) : [`${relationship} companies`];
@@ -99,14 +99,14 @@ export default class Collection extends ReactiveVue {
         doc?: firebase.firestore.DocumentReference,
         batch?: firebase.firestore.WriteBatch
     } = {}) {
-        const {data, doc, batch} = params;
+        const { data, doc, batch } = params;
 
         this.doc = doc ? doc : this.getCollection().doc();
 
         const documentData = data ? ((typeof data === 'function') ? data(this.getData()) : data) : this.getData();
 
-        if (Array.isArray(this.belongsTo) && this.belongsTo.length) {
-            const relationships = this.belongsTo.map((relationship) => {
+        if (this.isHaveRelationships()) {
+            const relationships = this.getRelationships().map((relationship) => {
                 return `${relationship()?.getDoc()?.id} ${relationship()?.getCollectionName()}`;
             });
 
@@ -115,7 +115,7 @@ export default class Collection extends ReactiveVue {
 
         const payload = this.getPayload({
             ...params,
-            doc: this.getDoc(),
+            doc: (this.getDoc() as firebase.firestore.DocumentReference),
             data: this.confirm(documentData, 'create')
         });
 
@@ -134,7 +134,7 @@ export default class Collection extends ReactiveVue {
 
         Subscriptions.get().subscribe(`${this.constructor.name}/${this.getDoc().id}`, this.getDocuments(this.getDoc().id));
 
-        return batch ? batch.set(this.getDoc(), payload) : this.getDoc().set(payload);
+        return batch ? batch.set((this.getDoc() as firebase.firestore.DocumentReference), payload) : this.getDoc().set(payload);
     }
 
     public update(params: {
@@ -145,9 +145,11 @@ export default class Collection extends ReactiveVue {
     }) {
         console.log(`%cSet Data: ${this.constructor.name}`, 'color: lightblue;', params);
 
-        const {data, batch, doc} = params;
+        const { data, batch, doc } = params;
 
-        const document = doc ?? this.getCollection().doc(this.getData('id'));
+        if (doc) {
+            this.doc = doc;
+        }
 
         const payload = this.confirm((typeof data === 'function') ? data(this.getData()) : data, 'update');
 
@@ -158,7 +160,7 @@ export default class Collection extends ReactiveVue {
 
         this.notifyEventListeners('updating', params);
 
-        return batch ? batch.set(document, payload, {merge: true}) : document.set(payload, {merge: true});
+        return batch ? batch.set((this.getDoc() as firebase.firestore.DocumentReference), payload, { merge: true }) : this.getDoc().set(payload, { merge: true });
     }
 
     public remove(params: {
@@ -168,9 +170,11 @@ export default class Collection extends ReactiveVue {
     } = {}) {
         console.log(`%cSet Data: ${this.constructor.name}`, 'color: red;', params);
 
-        const {batch, doc} = params;
+        const { batch, doc } = params;
 
-        const document = doc ?? this.getCollection().doc(this.getData('id'));
+        if (doc) {
+            this.doc = doc;
+        }
 
         this.log({
             ...params,
@@ -180,7 +184,7 @@ export default class Collection extends ReactiveVue {
 
         this.notifyEventListeners('deleting', params);
 
-        return batch ? batch.delete(document) : document.delete();
+        return batch ? batch.delete(this.getDoc() as firebase.firestore.DocumentReference) : this.getDoc().delete();
     }
 
     protected async databaseWrite(data: object) {
@@ -213,7 +217,7 @@ export default class Collection extends ReactiveVue {
         batch?: firebase.firestore.WriteBatch
     }) {
         if (this.logging()) {
-            const {data, operation, batch, user} = params;
+            const { data, operation, batch, user } = params;
 
             const createdBy = this.getUser(user);
 
@@ -247,14 +251,6 @@ export default class Collection extends ReactiveVue {
         return (this.$firebase.firestore as { [p: string]: any }).FieldValue.serverTimestamp();
     }
 
-    public getUser(user?: { id: string }) {
-        return user ? user.id : '';
-    }
-
-    public getCompany(company?: { id: string }) {
-        return company ? company.id : '';
-    }
-
     public getCollection() {
         return this.$firebase.firestore().collection(this.getCollectionName());
     }
@@ -268,11 +264,30 @@ export default class Collection extends ReactiveVue {
         }
     }
 
+    public getPrimaryRelationship() {
+        return (this.getRelationships()[0]() as Collection);
+    }
+
+    protected isHaveRelationships() {
+        return Array.isArray(this.belongsTo) && this.belongsTo.length;
+    }
+
+    protected getRelationships() {
+        return this.isHaveRelationships() ? (this.belongsTo ?? []) : [];
+    }
+
     public getDocumentOwners(): Array<string> {
-        return [`${this.getDoc()?.id} ${this.getCollectionName()}`];
+        return [`${this.getDoc().id} ${this.getCollectionName()}`];
     }
 
     public getCollectionName(): string {
         throw new Error(`Collection Name In ${this.constructor.name} Was Not Provided.`);
+    }
+    public getUser(user?: { id: string }) {
+        return user ? user.id : '';
+    }
+
+    public getCompany(company?: { id: string }) {
+        return company ? company.id : '';
     }
 }

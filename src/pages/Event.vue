@@ -12,75 +12,84 @@ import Subscriptions
 @Component
 export default class Index extends ReactiveVue {
     protected get event() {
-        return this.$store.getters["events/GET_EVENTS"](this.$route.params.id);
+        const id = this.$route.params.id;
+        return id ? this.$store.getters["events/GET_EVENTS"](id) : {};
     }
 
     protected mounted() {
-        const event = (this.$refs.event as Collection);
+        if (this.$route.params.id) {
+            const event = (this.$refs.event as Collection);
 
-        // When the page is refreshed, we loose the Events Subscription. If this happens, we subscribe to the current event document.
-        if (!Subscriptions.get().hasSubscription(`Events`)) {
-            Subscriptions.get().subscribe(`Event/${this.event.id}`, event.getDocuments(this.event.id));
-        }
-
-        if (!Subscriptions.get().hasSubscription(`Event/${this.event.id}/Phones`)) {
-            const subscription = (event.$refs.phone as Collection).getDocuments((collection: Collection) => {
-                return collection.getCollection().where('belongsTo', 'array-contains', `${this.event.id} events`)
-                    .onSnapshot((snapshot) => {
-                        snapshot.forEach((phone) => {
-                            collection.repData(phone.data());
-                            const name = `Event/${this.event.id}/Phone/${phone.id}`;
-                            if (!Subscriptions.get().hasSubscription(name)) {
-                                Subscriptions.get().subscribe(name, subscription);
-                            }
-                        });
-                    });
-            });
-        } else {
-            (event.$refs.phone as Collection).repData(this.$store.getters["events/GET_PHONES"](this.event.id));
-        }
-
-        if (!Subscriptions.get().hasSubscription(`Event/${this.event.id}/Emails`)) {
-            const subscription = (event.$refs.email as Collection).getDocuments((collection: Collection) => {
-                return collection.getCollection().where('belongsTo', 'array-contains', `${this.event.id} events`)
-                    .onSnapshot((snapshot) => {
-                        snapshot.forEach((email) => {
-                            collection.repData(email.data());
-                            const name = `Event/${this.event.id}/Email/${email.id}`;
-                            if (!Subscriptions.get().hasSubscription(name)) {
-                                Subscriptions.get().subscribe(name, subscription);
-                            }
-                        });
-                    });
-            });
-        } else {
-            (event.$refs.email as Collection).repData(this.$store.getters["events/GET_EMAILS"](this.event.id));
-        }
-
-        // We are listening for when the address is showing, and only then are we calling for the data.
-        (this.$refs.event as Collection).addEventListeners({
-            onAddressShowing: (collection: Collection) => {
-                const id = collection.getData('id');
-                if (!Subscriptions.get().hasSubscription(`Event/${id}/Addresses`)) {
-                    if (id) {
-                        const subscription = (event.$refs.address as Collection).getDocuments((collection: Collection) => {
-                            return collection.getCollection().where('belongsTo', 'array-contains', `${id} events`)
-                                .onSnapshot((snapshot) => {
-                                    snapshot.forEach((address) => {
-                                        collection.repData(address.data());
-                                        const name = `Event/${id}/Address/${address.id}`;
-                                        if (!Subscriptions.get().hasSubscription(name)) {
-                                            Subscriptions.get().subscribe(name, subscription);
-                                        }
-                                    });
-                                });
-                        });
-                    }
-                } else {
-                    (event.$refs.address as Collection).repData(this.$store.getters["events/GET_ADDRESSES"](id));
-                }
+            // When the page is refreshed, we loose the Events Subscription. If this happens, we subscribe to the current event document.
+            if (!Subscriptions.get().hasSubscription(`Events`)) {
+                Subscriptions.get().subscribe(`Event/${this.event.id}`, event.getDocuments(this.event.id));
             }
-        });
+
+            if (!Subscriptions.get().hasSubscription(`Event/${this.event.id}/Phones`)) {
+                const subscription = (event.$refs.phone as Collection).getDocuments((collection: Collection) => {
+                    return collection.getCollection().where('belongsTo', 'array-contains', `${this.event.id} events`)
+                        .onSnapshot((snapshot) => {
+                            snapshot.forEach((phone) => {
+                                collection.repData(phone.data());
+                                const name = `Event/${this.event.id}/Phone/${phone.id}`;
+                                if (!Subscriptions.get().hasSubscription(name)) {
+                                    Subscriptions.get().subscribe(name, subscription);
+                                }
+                            });
+                        });
+                });
+            } else {
+                this.$watch(() => this.$store.getters["events/GET_PHONES"](this.event.id), (phone) => {
+                    (event.$refs.phone as Collection).repData(phone);
+                }, {immediate: true});
+            }
+
+            if (!Subscriptions.get().hasSubscription(`Event/${this.event.id}/Emails`)) {
+                const subscription = (event.$refs.email as Collection).getDocuments((collection: Collection) => {
+                    return collection.getCollection().where('belongsTo', 'array-contains', `${this.event.id} events`)
+                        .onSnapshot((snapshot) => {
+                            snapshot.forEach((email) => {
+                                collection.repData(email.data());
+                                const name = `Event/${this.event.id}/Email/${email.id}`;
+                                if (!Subscriptions.get().hasSubscription(name)) {
+                                    Subscriptions.get().subscribe(name, subscription);
+                                }
+                            });
+                        });
+                });
+            } else {
+                this.$watch(() => this.$store.getters["events/GET_EMAILS"](this.event.id), (email) => {
+                    (event.$refs.email as Collection).repData(email);
+                }, {immediate: true});
+            }
+
+            // We are listening for when the address is showing, and only then are we calling for the data.
+            (this.$refs.event as Collection).addEventListeners({
+                onAddressShowing: (collection: Collection) => {
+                    const id = collection.getData('id');
+                    if (!Subscriptions.get().hasSubscription(`Event/${id}/Addresses`)) {
+                        if (id) {
+                            const subscription = (event.$refs.address as Collection).getDocuments((collection: Collection) => {
+                                return collection.getCollection().where('belongsTo', 'array-contains', `${id} events`)
+                                    .onSnapshot((snapshot) => {
+                                        snapshot.forEach((address) => {
+                                            collection.repData(address.data());
+                                            const name = `Event/${id}/Address/${address.id}`;
+                                            if (!Subscriptions.get().hasSubscription(name)) {
+                                                Subscriptions.get().subscribe(name, subscription);
+                                            }
+                                        });
+                                    });
+                            });
+                        }
+                    } else {
+                        this.$watch(() => this.$store.getters["events/GET_ADDRESSES"](id), (address) => {
+                            (event.$refs.address as Collection).repData(address);
+                        }, {immediate: true});
+                    }
+                }
+            });
+        }
     }
 
     protected beforeDestroy() {
@@ -105,7 +114,7 @@ export default class Index extends ReactiveVue {
                 props: {data: this.event},
                 scopedSlots: {
                     create: (component: Collection) => {
-                        if (!(this.$refs.event as Collection)?.getData('id')) {
+                        if (!component.getData('id')) {
                             return createElement('q-btn', {
                                 class: 'fit',
                                 props: {
@@ -114,20 +123,18 @@ export default class Index extends ReactiveVue {
                                     loading: this.loadingStatus()
                                 },
                                 on: {
-                                    click: () => {
-                                        this.safeRequest({
-                                            try: async () => {
-                                                const batch = this.$firebase.firestore().batch();
-                                                component.create({batch});
-                                                (component.$refs.phone as Collection).create({batch});
-                                                (component.$refs.address as Collection).create({batch});
-                                                (component.$refs.email as Collection).create({batch});
-                                                await batch.commit();
-                                                component.notifyEventListeners('created');
-                                                this.$router.push(`/event/${component.getDoc().id}`);
-                                            }
-                                        });
-                                    }
+                                    click: () => this.safeRequest({
+                                        try: async () => {
+                                            const batch = this.$firebase.firestore().batch();
+                                            component.create({batch});
+                                            (component.$refs.phone as Collection).create({batch});
+                                            (component.$refs.address as Collection).create({batch});
+                                            (component.$refs.email as Collection).create({batch});
+                                            await batch.commit();
+                                            component.notifyEventListeners('created');
+                                            this.$router.push(`/event/${component.getDoc().id}`);
+                                        }
+                                    })
                                 }
                             });
                         }

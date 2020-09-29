@@ -4,6 +4,7 @@ import Collection
     from "app/helpers/Collection";
 import Subscriptions
     from "app/helpers/Subscriptions";
+import {Event} from 'components/models'
 import {getFirestoreTimestamp} from "app/helpers/CommonHelper";
 import moment
     from 'moment';
@@ -15,19 +16,19 @@ export default class Events extends Collection {
     }
 
     protected get phone() {
-        return (id) => {
+        return (id: string) => {
             return this.$store.getters["events/GET_PHONES"](id);
         }
     }
 
     protected get email() {
-        return (id) => {
+        return (id: string) => {
             return this.$store.getters["events/GET_EMAILS"](id);
         }
     }
 
     protected get address() {
-        return (id) => {
+        return (id: string) => {
             return this.$store.getters["events/GET_ADDRESSES"](id);
         }
     }
@@ -88,7 +89,7 @@ export default class Events extends Collection {
         ]);
     }
 
-    protected getBodySlot(props: Event) {
+    protected getBodySlot(props: { row: Event }) {
         return this.$createElement('q-tr', {
             class: 'cursor-pointer',
             on: {click: () => this.$router.push(`/event/${props.row.id}`)}
@@ -140,7 +141,7 @@ export default class Events extends Collection {
     protected getEventDependencies(event: { id: string }) {
         this.getEventEmail(event);
         this.getEventPhone(event);
-        this.getEventAddress(event);
+        // this.getEventAddress(event);
     }
 
     protected getEventAddress(event: { id: string }) {

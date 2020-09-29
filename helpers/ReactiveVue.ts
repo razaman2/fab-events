@@ -35,13 +35,13 @@ export default class ReactiveVue extends Vue {
         props: {}
     };
 
-    protected loading: { status: boolean, text: string } = {
+    private loading: { status: boolean, text: string } = {
         status: false,
         text: 'Please wait...'
     };
 
     protected loadingStatus(status?: boolean) {
-        if (status) {
+        if (status !== undefined) {
             this.loading.status = status;
         }
 
@@ -49,7 +49,7 @@ export default class ReactiveVue extends Vue {
     }
 
     protected loadingText(message?: string) {
-        if (message) {
+        if (message !== undefined) {
             this.loading.text = message;
         }
 
@@ -88,23 +88,6 @@ export default class ReactiveVue extends Vue {
 
     // END HTML NODES
 
-    public getData(path = '', alternative?: any): any {
-        return this.model ?
-            this.model.getData(path, alternative) :
-            ObjectManager.on(this.state.props).get(path, alternative);
-    }
-
-    public setData(data: object) {
-        this.model ? this.model.setData(data) : this.componentWrite(data);
-
-        return this;
-    }
-
-    public repData(data: object) {
-        this.$set(this.state, 'props', {});
-        return this.setData(data);
-    }
-
     protected componentWrite(data: object) {
         const manager = ObjectManager.on(data);
         const paths = manager.paths();
@@ -138,6 +121,23 @@ export default class ReactiveVue extends Vue {
 
     protected super(name: string, ...params: Array<any>) {
         return (this.constructor as { [p: string]: any }).super.options.methods[name].call(this, ...params);
+    }
+
+    public getData(path = '', alternative?: any): any {
+        return this.model ?
+            this.model.getData(path, alternative) :
+            ObjectManager.on(this.state.props).get(path, alternative);
+    }
+
+    public setData(data: object) {
+        this.model ? this.model.setData(data) : this.componentWrite(data);
+
+        return this;
+    }
+
+    public repData(data = {}) {
+        this.$set(this.state, 'props', {});
+        return this.setData(data);
     }
 
     public addEventListeners(...handlers: Array<Function | { [p: string]: Function }>) {
